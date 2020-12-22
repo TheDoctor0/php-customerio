@@ -1,5 +1,5 @@
 {
-    "name": "userscape/php-customerio",
+    "name": "thedoctor0/php-customerio",
     "description": "PHP API for Customer.io",
     "keywords": ["customer.io", "customerio", "php customer.io", "php customerio"],
     "require": {
