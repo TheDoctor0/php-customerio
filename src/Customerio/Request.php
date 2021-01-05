@@ -1,56 +1,71 @@
-<?php namespace Customerio;
+<?php
 
-use Guzzle\Http\Exception\RequestException;
+namespace Customerio;
 
-class Request {
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\BadResponseException;
+use GuzzleHttp\Exception\RequestException;
+use stdClass;
+
+class Request
+{
 
     /**
      * An HTTP Client
-     * @var \Guzzle\Http\Client
+     *
+     * @var \GuzzleHttp\Client
      */
     protected $client;
 
     /**
      * Basic Auth Credentials
      * ['user', 'password']
+     *
      * @var array
      */
-    protected $auth = array();
+    protected $auth = [];
 
     /**
      * Create a new Request
      * Bootlegness for testing
+     *
      * @param null $client
      */
-    public function __construct($client=null)
+    public function __construct($client = null)
     {
-        if( ! is_null($client) )
-        {
+        if (! is_null($client)) {
             $this->client = $client;
+
             return;
         }
 
-        $this->client = new \Guzzle\Http\Client('https://track.customer.io');
+        $this->client = new Client([
+            'base_uri' => 'https://track.customer.io',
+        ]);
     }
 
     /**
      * Send Create/Update Customer Request
+     *
      * @param $id
      * @param $email
      * @param $attributes
+     *
      * @return Response
      */
     public function customer($id, $email, $attributes)
     {
-        $body = array_merge(array('email' => $email), $attributes);
+        $body = array_merge(['email' => $email], $attributes);
 
         try {
-            $response = $this->client->put('/api/v1/customers/'.$id, null, $body, array(
+            $response = $this->client->put('/api/v1/customers/' . $id, [
                 'auth' => $this->auth,
-            ))->send();
-        } catch(RequestException $e)
-        {
+                'json' => $body,
+            ]);
+        } catch (BadResponseException $e) {
             $response = $e->getResponse();
+        } catch (RequestException $e) {
+            return new Response($e->getCode(), $e->getMessage());
         }
 
         return new Response($response->getStatusCode(), $response->getReasonPhrase());
@@ -58,53 +73,59 @@ class Request {
 
     /**
      * Send Delete Customer Request
+     *
      * @param $id
+     *
      * @return Response
      */
     public function deleteCustomer($id)
     {
         try {
-            $response = $this->client->delete('/api/v1/customers/'.$id, null, null, array(
+            $response = $this->client->delete('/api/v1/customers/' . $id, [
                 'auth' => $this->auth,
-            ))->send();
-        }catch(RequestException $e)
-        {
+            ]);
+        } catch (BadResponseException $e) {
             $response = $e->getResponse();
+        } catch (RequestException $e) {
+            return new Response($e->getCode(), $e->getMessage());
         }
-
 
         return new Response($response->getStatusCode(), $response->getReasonPhrase());
     }
 
     /**
      * Send and Event to Customer.io
+     *
      * @param $id
      * @param $name
      * @param $data
+     *
      * @return Response
      */
     public function event($id, $name, $data)
     {
-        $body = array_merge( array('name' => $name), $this->parseData($data) );
+        $body = array_merge(['name' => $name], $this->parseData($data));
 
         try {
-            $response = $this->client->post('/api/v1/customers/'.$id.'/events', null, $body, array(
+            $response = $this->client->post('/api/v1/customers/' . $id . '/events', [
                 'auth' => $this->auth,
-            ))->send();
-        }catch(RequestException $e)
-        {
-
+                'json' => $body,
+            ]);
+        } catch (BadResponseException $e) {
             $response = $e->getResponse();
+        } catch (RequestException $e) {
+            return new Response($e->getCode(), $e->getMessage());
         }
-
 
         return new Response($response->getStatusCode(), $response->getReasonPhrase());
     }
 
     /**
      * Set Authentication credentials
+     *
      * @param $apiKey
      * @param $apiSecret
+     *
      * @return $this
      */
     public function authenticate($apiKey, $apiSecret)
@@ -117,20 +138,20 @@ class Request {
 
     /**
      * Parse data as specified by customer.io
+     *
      * @link http://customer.io/docs/api/rest.html
+     *
      * @param array $data
+     *
      * @return array
      */
     protected function parseData(array $data)
     {
-        $parsed = array();
-
-        foreach( $data as $key => $value)
-        {
-            $parsed['data['.$key.']'] = $value;
+        if (empty($data)) {
+            return ['data' => new stdClass()];
         }
 
-        return $parsed;
+        return ['data' => $data];
     }
 
 }
